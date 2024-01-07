@@ -1,0 +1,140 @@
+import tkinter as tk
+from tkinter import PhotoImage
+
+class LaserSimulator:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Laser Beam Simulator")
+
+        self.grid_size = (5, 6)
+        self.grid = [[None] * self.grid_size[1] for _ in range(self.grid_size[0])]
+
+        self.laser_x = 0
+        self.laser_y = 0  
+        self.laser_direction = (1, 0)  
+
+        self.mirrors = {
+            (2, 1): "right",  
+            (2, 3): "right",  
+            (1, 0): "left",   
+            (1 ,3): "left",   
+            (4, 1): "left",   
+            (4, 4): "left",   
+        }
+        
+        self.canvas = tk.Canvas(root, width=500, height=300)
+        self.canvas.pack()
+
+        self.draw_grid()
+        self.draw_laser()
+
+    def draw_grid(self):
+        cell_width = 80
+        cell_height = 50
+        for row in range(self.grid_size[0]):
+            for col in range(self.grid_size[1]):
+                x0 = col * cell_width
+                y0 = row * cell_height
+                x1 = x0 + cell_width
+                y1 = y0 + cell_height
+                self.grid[row][col] = self.canvas.create_rectangle(x0, y0, x1, y1, fill="white")
+
+        for mirror_pos, mirror_type in self.mirrors.items():
+            x, y = mirror_pos
+            color = "gray" if mirror_type == "right" else "blue"
+            self.grid[y][x] = self.canvas.create_rectangle(x * cell_width, y * cell_height, (x + 1) * cell_width, (y + 1) * cell_height, fill=color)
+
+    def draw_laser(self):
+        x0 = self.laser_x * 80 + 40
+        y0 = self.laser_y * 50 + 25
+        x1 = x0 + self.laser_direction[0] * 40
+        y1 = y0 + self.laser_direction[1] * 40
+        self.laser_line = self.canvas.create_line(x0, y0, x1, y1, fill="red", width=3)
+
+    def move_laser(self):
+        new_x = self.laser_x + self.laser_direction[0]
+        new_y = self.laser_y + self.laser_direction[1]
+
+        if 0 <= new_x < self.grid_size[1] and 0 <= new_y < self.grid_size[0]:
+            self.laser_x = new_x
+            self.laser_y = new_y
+            self.canvas.delete(self.laser_line)
+            self.draw_laser()
+
+            if (new_x, new_y) in self.mirrors:
+                self.reflect_laser(self.mirrors[(new_x, new_y)])
+
+        if new_x >= self.grid_size[1]:
+            self.show_safe_message()
+        else:
+            self.root.after(500, self.move_laser)
+
+    def reflect_laser(self, mirror_type):
+        if mirror_type == "right" and self.laser_direction not in [(0,1),(0,-1)]:
+            self.laser_direction = (self.laser_direction[1], -self.laser_direction[0])
+        elif mirror_type == "right" and self.laser_direction in [(0,1),(0,-1)]:
+            self.laser_direction = (-self.laser_direction[1], self.laser_direction[0])
+        elif mirror_type == "left" and self.laser_direction not in [(0,1),(0,-1)]:
+            self.laser_direction = (-self.laser_direction[1], self.laser_direction[0])
+        else:
+            self.laser_direction = (self.laser_direction[1], -self.laser_direction[0])
+
+        self.canvas.delete(self.laser_line)
+        self.draw_laser()
+
+    def show_safe_message(self):
+        self.root.withdraw()  # Hide the main window
+        output_window = tk.Toplevel()  # Create a new window
+        output_window.title("Safe is Secure")
+        
+        message_label = tk.Label(output_window, text="Safe is secure", font=("Helvetica",60),fg="green")
+        message_label.pack(pady=100)
+
+        close_button = tk.Button(output_window, text="Close", command=output_window.destroy, font=("Helvetica", 60), bg="powder blue")
+        close_button.pack(pady=100)
+
+class DualImages:
+    def __init__(self, root):
+        self.root = root
+        
+        self.safe_image = PhotoImage(file="C:\\Users\\ksrut\\Pictures\\safe.png")
+        
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        
+        image_width = self.safe_image.width()
+        image_height = self.safe_image.height()
+
+        # Calculate the coordinates to place the image in the center of the window
+        image_x = (screen_width - image_width) // 2
+        image_y = (screen_height - image_height) // 2
+        
+        self.canvas = tk.Canvas(self.root, width=screen_width, height=screen_height)
+        self.canvas.pack()
+        
+        self.canvas.create_image(image_x, image_y, anchor=tk.NW, image=self.safe_image)
+        
+        start_button = tk.Button(self.root, text="Start Simulation", command=self.start_simulation, font=("Helvetica", 14), bg="powder blue")
+        start_button.place(relx=0.5, rely=1.0, anchor="s")
+
+    def start_simulation(self):
+        self.root.withdraw()  # Hide the start button window
+        output_window = tk.Tk()
+        app = LaserSimulator(output_window)
+        app.move_laser()
+        output_window.mainloop()
+
+def main():
+    root = tk.Tk()
+
+    root.title("Laser Simulator")  # Set the title for the main window
+    
+    # Configure the root window to be fullscreen
+    root.attributes("-fullscreen", True)
+
+    dual_images = DualImages(root)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
